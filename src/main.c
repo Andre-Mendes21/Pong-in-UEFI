@@ -159,6 +159,7 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syste
     bat_t rightBat = {.size = 10, .speed = 4};
     initGame(&ball, &leftBat, &rightBat);
 
+    // Update loop
     BOOLEAN stop = FALSE;
     while (!stop) {
         EFI_INPUT_KEY keyPress;
@@ -169,11 +170,7 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syste
         updateBall(&ball, &leftBat, &rightBat);
         gBS->Stall(50000);
     }
-    
 
-
-
-    gBS->Stall(100000000);
     // Clear screen to black before returing
     gop->SetMode(gop, mode);
     return EFI_SUCCESS;
