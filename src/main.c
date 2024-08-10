@@ -15,19 +15,20 @@ typedef struct {
     UINT32 width;
     UINT32 height;
 } GameWindow;
+GameWindow gameWindow;
 
 typedef struct {
-    UINT32 x;
-    UINT32 y;
-    UINT32 speedX;
-    UINT32 speedY;
+    INT32 x;
+    INT32 y;
+    INT32 speedX;
+    INT32 speedY;
 } ball_t;
 
 typedef struct {
-    UINT32 x;
-    UINT32 y;
+    INT32 x;
+    INT32 y;
+    INT32 speed;
     const UINT32 size;
-    const UINT32 speed;
 } bat_t;
 
 VOID drawCell(UINT32 x, UINT32 y, BOOLEAN erase) {
@@ -53,7 +54,7 @@ VOID drawBat(bat_t* bat, BOOLEAN erase) {
 }
 
 
-VOID initGame(GameWindow gameWindow, ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
+VOID initGame(ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
     ball->x = gameWindow.width / 2;
     ball->y = gameWindow.height / 2;
     ball->speedX = -1;
@@ -65,6 +66,67 @@ VOID initGame(GameWindow gameWindow, ball_t* ball, bat_t* leftBat, bat_t* rightB
 
     drawBat(leftBat, FALSE);
     drawBat(rightBat, FALSE);
+    drawBall(ball, FALSE);
+}
+
+VOID moveBat(bat_t* bat, BOOLEAN up) {
+    drawBat(bat, TRUE);
+    INT8 dir = up ? -1 : 1;
+    bat->y += dir * bat->speed;
+    if(bat->y < bat->speed) {
+        bat->y = 0;
+    } else if(bat->y > gameWindow.height - bat->size) {
+        bat->y = gameWindow.height - bat->size;
+    }
+    drawBat(bat, FALSE);
+}
+
+VOID updateBats(EFI_INPUT_KEY* keyPress, bat_t* leftBat, bat_t* rightBat) {
+    if(keyPress->UnicodeChar == 'w') {
+        moveBat(leftBat, TRUE);
+    } else if(keyPress->UnicodeChar == 's') {
+        moveBat(leftBat, FALSE);
+    }
+
+    if(keyPress->ScanCode == SCAN_UP) {
+        moveBat(rightBat, TRUE);
+    } else if(keyPress->ScanCode == SCAN_DOWN) {
+        moveBat(rightBat, FALSE);
+    }
+}
+
+BOOLEAN BatBlockBall(bat_t* bat, ball_t* ball) {
+  if(ABS(bat->x - ball->x) != 1) {
+    return FALSE;
+  }
+  return (bat->y <= ball->y) && ((bat->y + bat->size) >= ball->y);
+}
+
+VOID updateBall(ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
+    drawBall(ball, TRUE);
+    BOOLEAN goal = FALSE;
+    if(ball->x == 0) {
+        goal = TRUE;
+        // TODO: update right score here
+    } else if(ball->x == gameWindow.width) {
+        goal = TRUE;
+        // TODO: update right score here
+    }
+    if(goal) {
+        ball->x = gameWindow.width / 2;
+        ball->y = gameWindow.height / 2;
+        ball->speedX *= -1;
+    }
+    if(ball->y == 0 || ball->y >= gameWindow.height) {
+        ball->speedY *= -1;
+    }
+    if(BatBlockBall(leftBat, ball) || BatBlockBall(rightBat, ball)) {
+        ball->speedX *= -1;
+    }
+
+    ball->x += ball->speedX;
+    ball->y += ball->speedY;
+
     drawBall(ball, FALSE);
 }
 
@@ -88,13 +150,27 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syste
     // Define the game window
     UINT32 screenWidth = gop->Mode->Info->HorizontalResolution;
     UINT32 screenHeight = gop->Mode->Info->VerticalResolution;
-    GameWindow gameWindow = {screenWidth / CELLSIZE, screenHeight / CELLSIZE};
+    gameWindow.width = screenWidth / CELLSIZE;
+    gameWindow.height = screenHeight / CELLSIZE;
 
     // Initialize the game
     ball_t ball = {};
     bat_t leftBat = {.size = 10, .speed = 4};
     bat_t rightBat = {.size = 10, .speed = 4};
-    initGame(gameWindow, &ball, &leftBat, &rightBat);
+    initGame(&ball, &leftBat, &rightBat);
+
+    BOOLEAN stop = FALSE;
+    while (!stop) {
+        EFI_INPUT_KEY keyPress;
+        EFI_STATUS poll = gST->ConIn->ReadKeyStroke(gST->ConIn, &keyPress);
+        if(poll == EFI_SUCCESS) {
+            updateBats(&keyPress, &leftBat, &rightBat);
+        }
+        updateBall(&ball, &leftBat, &rightBat);
+        gBS->Stall(50000);
+    }
+    
+
 
 
     gBS->Stall(100000000);
