@@ -1,11 +1,13 @@
 #!/bin/bash
 
 set -e
-
 SRC_DIR=$PWD
+
 source ../edksetup.sh
 build -a X64 -t GCC5 -p MdeModulePkg/MdeModulePkg.dsc
+cp ../Build/MdeModule/DEBUG_GCC5/X64/Pong.efi $SRC_DIR/BOOTX64.EFI
 
-cp ../Build/MdeModule/DEBUG_GCC5/X64/Pong.efi ./BOOTX64.EFI
-cp BOOTX64.EFI hda-contents/
-qemu-system-x86_64 -pflash $SRC_DIR/OVMF_dir/OVMF.fd -hda fat:rw:hda-contents
+mkdir -p image/EFI/BOOT
+cp ./BOOTX64.EFI image/EFI/BOOT/
+
+qemu-system-x86_64 -net none -bios $SRC_DIR/OVMF_dir/OVMF.fd -drive file=fat:rw:image,media=disk,format=raw
