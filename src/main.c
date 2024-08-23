@@ -4,6 +4,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/GraphicsOutput.h>
+#include "include/Numbers.h"
 
 #define CELLSIZE 10
 
@@ -28,6 +29,7 @@ typedef struct {
     INT32 x;
     INT32 y;
     INT32 speed;
+    UINT8 score;
     const UINT32 size;
 } bat_t;
 
@@ -53,6 +55,30 @@ VOID drawBat(bat_t* bat, BOOLEAN draw) {
     }
 }
 
+VOID drawMiddleLine() {
+    UINT32 centre = gameWindow.width / 2;
+    for(INT32 i = 0; i <= gameWindow.height; i++) {
+        if(i % 4 == 0) {
+            drawCell(centre, i, TRUE);
+            drawCell(centre, i + 1, TRUE);
+        }
+    }
+}
+
+VOID DrawOneNumber(UINT8 score, UINT32 x) {
+    for(INT32 i = 0; i < NUMBERHEIGHT; i++) {
+        for(INT32 j = 0; j < NUMBERWIDTH; j++) {
+            drawCell(x + j, i + 1, NUMBERS[score][i][j]);
+        }
+    }
+}
+
+VOID drawScore(UINT8 leftScore, UINT8 rightScore) {
+    UINT32 centre = gameWindow.width / 2;
+    DrawOneNumber(leftScore, centre - 10 - NUMBERWIDTH);
+    DrawOneNumber(rightScore, centre + 10 + NUMBERWIDTH);
+}
+
 VOID initGame(ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
     ball->x = gameWindow.width / 2;
     ball->y = gameWindow.height / 2;
@@ -66,6 +92,8 @@ VOID initGame(ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
     drawBat(leftBat, TRUE);
     drawBat(rightBat, TRUE);
     drawBall(ball, TRUE);
+    drawScore(leftBat->score, rightBat->score);
+    drawMiddleLine();
 }
 
 VOID moveBat(bat_t* bat, BOOLEAN up) {
@@ -101,32 +129,48 @@ BOOLEAN BatBlockBall(bat_t* bat, ball_t* ball) {
   return (bat->y <= ball->y) && ((bat->y + bat->size) >= ball->y);
 }
 
-VOID updateBall(ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
+BOOLEAN updateBall(ball_t* ball, bat_t* leftBat, bat_t* rightBat) {
     drawBall(ball, FALSE);
     BOOLEAN goal = FALSE;
     if(ball->x == 0) {
         goal = TRUE;
-        // TODO: update right score here
+        rightBat->score++;
     } else if(ball->x == gameWindow.width) {
         goal = TRUE;
-        // TODO: update right score here
+        leftBat->score++;
     }
+
+    // End game
+    if(leftBat->score > 9 || rightBat->score > 9) {
+        return TRUE;
+    }
+
+    // Reset ball
     if(goal) {
         ball->x = gameWindow.width / 2;
         ball->y = gameWindow.height / 2;
         ball->speedX *= -1;
     }
+
+
+    // Bounce off walls
     if(ball->y == 0 || ball->y >= gameWindow.height) {
         ball->speedY *= -1;
     }
+
+    // Bounce off bats
     if(BatBlockBall(leftBat, ball) || BatBlockBall(rightBat, ball)) {
         ball->speedX *= -1;
     }
 
+    // Update ball's position
     ball->x += ball->speedX;
     ball->y += ball->speedY;
 
     drawBall(ball, TRUE);
+    drawScore(leftBat->score, rightBat->score);
+    drawMiddleLine();
+    return FALSE;
 }
 
 EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *systemTable) {
@@ -162,16 +206,15 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE imageHandle, IN EFI_SYSTEM_TABLE *syste
     BOOLEAN stop = FALSE;
     while (!stop) {
         EFI_INPUT_KEY keyPress;
-        
         EFI_STATUS poll = gST->ConIn->ReadKeyStroke(gST->ConIn, &keyPress);
+        stop = updateBall(&ball, &leftBat, &rightBat);
         if(poll == EFI_SUCCESS) {
-            // Exit game
             updateBats(&keyPress, &leftBat, &rightBat);
+            // Exit game
             if(keyPress.UnicodeChar == 'q') {
-                break;
+                stop = TRUE;
             }
         }
-        updateBall(&ball, &leftBat, &rightBat);
         gBS->Stall(50000);
     }
 
