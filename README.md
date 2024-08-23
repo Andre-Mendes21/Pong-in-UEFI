@@ -2,6 +2,8 @@
 
 A simple x86-64 [UEFI](https://wiki.osdev.org/UEFI) application of the game [Pong](https://en.wikipedia.org/wiki/Pong) using the [EDK II](https://github.com/tianocore/edk2) reference implementation of UEFI.
 
+![image](https://github.com/user-attachments/assets/1280623a-040c-4a52-9c4f-7e461e466543)
+
 ## Pre-requisites
 
 - [QEMU](https://qemu.org)
