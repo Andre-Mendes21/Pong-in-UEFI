@@ -54,3 +54,4 @@ dkms.conf
 # efi files
 *.[Ee][Ff][Ii]
 *.fd
+image/
