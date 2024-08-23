@@ -15,13 +15,13 @@ A simple x86-64 [UEFI](https://wiki.osdev.org/UEFI) application of the game [Pon
 
 3. Place the `OVMF.fd` file in the root folder of this project.
 
-4. Run `build.sh`
+4. Run `build.sh`.
 
 There should now be a folder called `image` containing the following structure `image/EFI/BOOT/` with the `BOOTX64.EFI` file inside.
 
 ## Running
 
-- Run `run.sh`
+- Run `run.sh`.
 
 ## Playing the Game
 
